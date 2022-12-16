@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    html body {
+      left: 0px;
+      right: 0px;
+      top: 0px;
+      bottom: 0px;
+      position: fixed;
+      margin: 0px;
+      padding: 0px;
+      -webkit-appearance: none;
+      background-image: linear-gradient(to right, #ff0000, #ff9900, #ffff00, #6aa84f, #0000ff, #9900ff, #674ea7);
+    }
+
+    svg {
+      position: absolute;
+      stroke: black;
+      fill: none;
+      stroke-width: 0.1;
+    }
+
+    path {
+      fill: none;
+      stroke-width: 1;
+    }
+
+    #colorOne {
+      stroke: hsl(45deg 100% 51%);
+    }
+
+    #colorTwo {
+      stroke: hsl(262deg 52% 47%);
+    }
+  </style>
+  <script type="text/javascript">
+    window.onload = (e) => console.log({ e, log: "onload" });
+  </script>
+</head>
+
+<body>
+
+
+  <svg width="100%" height="100%" id="root" xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink">
+
+
+
+    <!-- Define the pattern -->
+    <pattern class="paletteTwo" id="pattern-chevron" x="0" y="0" patternUnits="userSpaceOnUse" width="60" height="60"
+      viewBox="-20 -20 60 60">
+
+      <!-- Group the chevron shapes -->
+      <g id="chevron">
+        <!-- Chevron consists of two shapes, a left and a right to form a `v` -->
+        <!-- We'll apply the `fill` in the CSS for flexibility -->
+
+        <path d="M0 0 h10 v20 v-20 h20 l10 20 l10 -20 h20" />
+
+      </g>
+
+      <g id="vt">
+        <use x="-60" y="0" xlink:href="#chevron" />
+        <use x="0" y="0" xlink:href="#chevron" />
+        <use x="60" y="0" xlink:href="#chevron" />
+      </g>
+      <!-- Apply the shapes -->
+      <!-- `y="9"` narrows the space between rows  -->
+
+      <g id="colorOne" transform="translate(0,0)">
+        <use transform="translate(-20,-20)" xlink:href="#vt" />
+        <use x="0" y="0" xlink:href="#vt" />
+        <use transform="translate(20,20)" xlink:href="#vt" />
+      </g>
+
+
+      <g id="colorTwo" transform="translate(-10,-10)">
+        <use transform="translate(-40,-40)" xlink:href="#vt" />
+        <use transform="translate(-20,-20)" xlink:href="#vt" />
+        <use xlink:href="#vt" />
+        <use transform="translate(20,20)" xlink:href="#vt" />
+        <use transform="translate(40,40)" xlink:href="#vt" />
+      </g>
+
+
+    </pattern>
+    <pattern class="paletteTwo" id="pattern-vt" x="0" y="0" patternUnits="userSpaceOnUse" width="60" height="60"
+      viewBox="-20 -20 60 60">
+
+    </pattern>
+    <!-- The canvas for our pattern -->
+    <rect class="paletteOne" opacity="1" x="-10" y="-10" width="100%" height="100%" fill="url(#pattern-chevron)" />
+
+
+  </svg>
+
+  <div>
+    <ul>
+      <li> <audio controls src="isUis00001.mp3" type="audio/mpeg"></audio></li>
+      <li> <audio controls src="isUis00002.mp3" type="audio/mpeg"></audio></li>
+      <li> <audio controls src="isUis00003.mp3" type="audio/mpeg"></audio></li>
+      <li> <audio controls src="isUis00004.mp3" type="audio/mpeg"></audio></li>
+      <li> <audio controls src="isUis00005.mp3" type="audio/mpeg"></audio></li>
+      <li> <audio controls src="isUis00006.mp3" type="audio/mpeg"></audio></li>
+    </ul>
+  </div>
+  
+    <script type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.js"></script>
+    <script type="text/javascript">
+
+
+      console.log({ jsmediatags });
+
+
+
+
+      var audioCtx = new AudioContext();
+
+      let out = audioCtx.destination;
+
+      out.channelInterpretation = "discrete";
+      out.channelCount = audioCtx.destination.maxChannelCount;
+
+      const { channelCount, maxChannelCount } = out;
+
+      console.log({ out })
+
+      //audioCtx.destination.numberOfOutputs = 6;
+
+      var channelMerger = audioCtx.createChannelMerger(audioCtx.destination.maxChannelCount);
+
+      channelMerger.channelCountMode = "explicit";
+      channelMerger.channelInterpretation = "discrete";
+      channelMerger.connect(audioCtx.destination);
+
+
+      console.log({ channelMerger })
+
+      const tracks = [...document
+        .querySelectorAll('audio[src^="isUis"]')
+        //.forEach((audio)=>console.log(audio))
+        .values()
+      ]
+        .map(audio => audioCtx.createMediaElementSource(audio))
+
+
+      let metadata = [...document
+        .querySelectorAll('audio[src^="isUis"]')
+        .values()
+      ]
+        .map(async t => {
+          const src = "http://127.0.0.1:5501/" + t.getAttribute('src');
+          const par = t.parentElement
+          const meta = await jsmediatags.read(src,{
+            onSuccess:({tags})=>{
+              console.log(tags)
+              par.prepend(tags.title)
+            },
+            onError:console.error
+          })
+    
+            console.log({src,meta, par})
+        })
+
+
+      const outs = tracks.map((track, i) => {
+        const out = audioCtx.createChannelSplitter(2);
+        const offset = 2 * i;
+        out.connect(channelMerger, 0, offset + 0)
+        out.connect(channelMerger, 1, offset + 1)
+        track.connect(out);
+        return out;
+
+      })
+
+      console.log({ outs })
+
+
+      //   .forEach((audio)=>{
+      //     console.log(audio)
+      //     return audioCtx.createMediaElementSource(audio)
+      //  })
+
+      //.map(audioCtx.createMediaElementSource)
+
+      console.log(tracks[0])
+
+      //const tr = audioCtx.createMediaElementSource(tracks[0])
+      console.log({ tracks })
+
+      async function playAll(event) {
+        event.target.pause();
+        event.target.removeEventListener('play', playAll)
+
+        const tracks = [...document
+          .querySelectorAll('audio[src^="isUis"]')]
+
+        const loads = await Promise.all(tracks.map(t => t.load()))
+        tracks.map(track => track.play())
+      }
+
+      document.querySelector('audio[src^="isUis"]').addEventListener('play', playAll)
+
+
+    //var source = audioCtx.createMediaElementSource(document.querySelector('audio[src~=isUis]'));
+
+
+
+
+
+
+
+    </script>
+  
+
+</body>
+
+</html>
